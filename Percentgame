@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>百分比感覺遊戲</title>
+    <style>
+        /* 原有樣式保持不變 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            min-height: 100vh;
+            touch-action: manipulation;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        .target {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .slider-container {
+            width: 100%;
+            height: 40px;
+            background: #ddd;
+            position: relative;
+            overflow: hidden;
+            touch-action: none;
+            transition: width 0.3s ease;
+        }
+
+        .slider {
+            width: 0%;
+            height: 100%;
+            background: #4CAF50;
+            position: absolute;
+            left: 0;
+            transition: width 0.1s;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:active {
+            background: #1976D2;
+        }
+
+        #submitBtn {
+            background: #4CAF50;
+            width: 100%;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        #submitBtn:active {
+            background: #388E3C;
+        }
+
+        .result {
+            font-size: 20px;
+            text-align: center;
+            margin-top: 20px;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .slider-wrapper {
+            width: 100%;
+            max-width: 600px;
+            background: transparent;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        /* 煙花動畫相關樣式 */
+        .fireworks-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .firework {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            animation: explode 1s ease-out forwards;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            animation: spread 1s ease-out forwards;
+        }
+
+        @keyframes explode {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+
+        @keyframes spread {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty));
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="fireworks-container" id="fireworksContainer"></div>
+    <div class="game-container">
+        <!-- 原有HTML内容保持不變 -->
+        <div class="target">目標：<span id="targetPercentage">0</span>%</div>
+        <div class="slider-wrapper">
+            <div class="slider-container" id="sliderContainer">
+                <div class="slider" id="slider"></div>
+            </div>
+        </div>
+        <button id="submitBtn">提交答案</button>
+        <div class="button-group">
+            <button id="newGameBtn">重新一局<br>(完整長度)</button>
+            <button id="newGameWithRefBtn">重新一局<br>(隨機長度)</button>
+        </div>
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        // 原有JavaScript代碼保持不變
+        let targetPercent = 0;
+        let currentPercent = 0;
+        let isSliding = false;
+        let referenceWidth = 100;
+        let maxWidth = 0;
+
+        const slider = document.getElementById('slider');
+        const sliderContainer = document.getElementById('sliderContainer');
+        const targetPercentageDisplay = document.getElementById('targetPercentage');
+        const submitBtn = document.getElementById('submitBtn');
+        const newGameBtn = document.getElementById('newGameBtn');
+        const newGameWithRefBtn = document.getElementById('newGameWithRefBtn');
+        const resultDisplay = document.getElementById('result');
+        const fireworksContainer = document.getElementById('fireworksContainer');
+
+        // 煙花動畫相關函數
+        function createFirework(x, y) {
+            const firework = document.createElement('div');
+            firework.className = 'firework';
+            firework.style.left = x + 'px';
+            firework.style.top = y + 'px';
+            firework.style.backgroundColor = getRandomColor();
+            fireworksContainer.appendChild(firework);
+
+            // 創建粒子
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.backgroundColor = firework.style.backgroundColor;
+                
+                const angle = (Math.PI * 2 * i) / 30;
+                const velocity = 50 + Math.random() * 50;
+                const tx = Math.cos(angle) * velocity;
+                const ty = Math.sin(angle) * velocity;
+                
+                particle.style.setProperty('--tx', `${tx}px`);
+                particle.style.setProperty('--ty', `${ty}px`);
+                
+                firework.appendChild(particle);
+            }
+
+            setTimeout(() => {
+                fireworksContainer.removeChild(firework);
+            }, 1000);
+        }
+
+        function getRandomColor() {
+            const colors = ['#ff0', '#f0f', '#0ff', '#f00', '#0f0', '#00f'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function celebrateSuccess() {
+            let fireworksCount = 0;
+            const maxFireworks = 15;
+            const interval = setInterval(() => {
+                const x = Math.random() * window.innerWidth;
+                const y = Math.random() * window.innerHeight;
+                createFirework(x, y);
+                fireworksCount++;
+                if (fireworksCount >= maxFireworks) {
+                    clearInterval(interval);
+                }
+            }, 300);
+        }
+
+        function initializeMaxWidth() {
+            maxWidth = sliderContainer.parentElement.offsetWidth;
+        }
+
+        function generateNewTarget(useReference = false) {
+            targetPercent = Math.floor(Math.random() * 100) + 1;
+            targetPercentageDisplay.textContent = targetPercent;
+            currentPercent = 0;
+            slider.style.width = '0%';
+            resultDisplay.textContent = '';
+            submitBtn.disabled = false;
+
+            if (useReference) {
+                referenceWidth = Math.floor(Math.random() * 60) + 40;
+                sliderContainer.style.width = referenceWidth + '%';
+            } else {
+                referenceWidth = 100;
+                sliderContainer.style.width = '100%';
+            }
+        }
+
+        function handleMove(event) {
+            if (!isSliding) return;
+            
+            const rect = sliderContainer.getBoundingClientRect();
+            const x = (event.type.includes('touch') ? 
+                event.touches[0].clientX : event.clientX) - rect.left;
+            
+            currentPercent = Math.min(Math.max(Math.round((x / rect.width) * 100), 0), 100);
+            slider.style.width = currentPercent + '%';
+        }
+
+        function calculateDifference() {
+            return targetPercent - currentPercent;
+        }
+
+        sliderContainer.addEventListener('mousedown', () => isSliding = true);
+        sliderContainer.addEventListener('touchstart', () => isSliding = true);
+
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('touchmove', handleMove);
+
+        document.addEventListener('mouseup', () => isSliding = false);
+        document.addEventListener('touchend', () => isSliding = false);
+
+        submitBtn.addEventListener('click', () => {
+            const difference = calculateDifference();
+            let message = `你的答案是 ${currentPercent}%\n`;
+            
+            if (Math.abs(difference) < 1) {
+                message += '完全正確！';
+                celebrateSuccess();
+            } else if (Math.abs(difference) <= 5) {
+                message += `非常接近！偏差只有 ${Math.abs(Math.round(difference))}%`;
+                celebrateSuccess();
+            } else if (difference > 0) {
+                message += `比目標少了 ${Math.abs(Math.round(difference))}%`;
+            } else {
+                message += `比目標多了 ${Math.abs(Math.round(difference))}%`;
+            }
+            
+            resultDisplay.innerHTML = message.replace('\n', '<br>');
+            submitBtn.disabled = true;
+        });
+
+        newGameBtn.addEventListener('click', () => generateNewTarget(false));
+        newGameWithRefBtn.addEventListener('click', () => generateNewTarget(true));
+
+        window.addEventListener('load', initializeMaxWidth);
+        window.addEventListener('resize', initializeMaxWidth);
+        
+        generateNewTarget(false);
+    </script>
+</body>
+</html>
