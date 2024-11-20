@@ -77,6 +77,27 @@
             background: #1976D2;
         }
 
+        #game-title {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        #game-title h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        #game-title p {
+            font-size: 16px;
+            color: #555;
+            margin: 0;
+        }
+
+
+
+
+        
         #submitBtn {
             background: #4CAF50;
             width: 100%;
@@ -197,7 +218,12 @@
 <body>
     <div class="fireworks-container" id="fireworksContainer"></div>
     <div class="game-container">
+        <div id="game-title">
+            <h1>百分數 數感遊戲</h1>
+            <p>製作：陳俊諺老師</p>
+        </div>
         <div class="target">目標：<span id="targetPercentage">0</span>%</div>
+        
         <div class="slider-wrapper">
             <div class="slider-container" id="sliderContainer">
                 <div class="slider" id="slider"></div>
