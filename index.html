@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>百分數 數感遊戲 製作：陳俊諺老師</title>
+    <title> 百分數 數感遊戲 製作：陳俊諺老師 </title>
     <style>
         /* 原有樣式保持不變 */
         body {
@@ -105,6 +104,46 @@
             margin: 0 auto;
         }
 
+        /* 遊戲紀錄表格樣式 */
+        .history-container {
+            margin-top: 20px;
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .history-table th {
+            background-color: #f5f5f5;
+        }
+
+        .history-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .accurate {
+            color: #4CAF50;
+        }
+
+        .close {
+            color: #2196F3;
+        }
+
+        .off {
+            color: #f44336;
+        }
+
         /* 煙花動畫相關樣式 */
         .fireworks-container {
             position: fixed;
@@ -158,7 +197,6 @@
 <body>
     <div class="fireworks-container" id="fireworksContainer"></div>
     <div class="game-container">
-        <!-- 原有HTML内容保持不變 -->
         <div class="target">目標：<span id="targetPercentage">0</span>%</div>
         <div class="slider-wrapper">
             <div class="slider-container" id="sliderContainer">
@@ -171,15 +209,32 @@
             <button id="newGameWithRefBtn">重新一局<br>(隨機長度)</button>
         </div>
         <div class="result" id="result"></div>
+        <div class="history-container">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>次序</th>
+                        <th>長度模式</th>
+                        <th>目標值</th>
+                        <th>作答值</th>
+                        <th>誤差</th>
+                        <th>結果</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-        // 原有JavaScript代碼保持不變
         let targetPercent = 0;
         let currentPercent = 0;
         let isSliding = false;
         let referenceWidth = 100;
         let maxWidth = 0;
+        let gameHistory = [];
+        let gameCount = 0;
 
         const slider = document.getElementById('slider');
         const sliderContainer = document.getElementById('sliderContainer');
@@ -189,8 +244,41 @@
         const newGameWithRefBtn = document.getElementById('newGameWithRefBtn');
         const resultDisplay = document.getElementById('result');
         const fireworksContainer = document.getElementById('fireworksContainer');
+        const historyTableBody = document.getElementById('historyTableBody');
 
-        // 煙花動畫相關函數
+        function updateHistoryTable() {
+            historyTableBody.innerHTML = '';
+            const displayHistory = gameHistory.slice(-10); // 只顯示最近10次記錄
+
+            displayHistory.forEach((record, index) => {
+                const row = document.createElement('tr');
+                const accuracy = Math.abs(record.difference);
+                let resultClass = '';
+                let resultText = '';
+
+                if (accuracy < 1) {
+                    resultClass = 'accurate';
+                    resultText = '完全正確！';
+                } else if (accuracy <= 5) {
+                    resultClass = 'close';
+                    resultText = '非常接近！';
+                } else {
+                    resultClass = 'off';
+                    resultText = '還可以更好';
+                }
+
+                row.innerHTML = `
+                    <td>${record.gameNumber}</td>
+                    <td>${record.mode}</td>
+                    <td>${record.target}%</td>
+                    <td>${record.answer}%</td>
+                    <td>${record.difference > 0 ? '+' : ''}${record.difference}%</td>
+                    <td class="${resultClass}">${resultText}</td>
+                `;
+                historyTableBody.appendChild(row);
+            });
+        }
+
         function createFirework(x, y) {
             const firework = document.createElement('div');
             firework.className = 'firework';
@@ -199,7 +287,6 @@
             firework.style.backgroundColor = getRandomColor();
             fireworksContainer.appendChild(firework);
 
-            // 創建粒子
             for (let i = 0; i < 30; i++) {
                 const particle = document.createElement('div');
                 particle.className = 'particle';
@@ -259,7 +346,10 @@
                 referenceWidth = 100;
                 sliderContainer.style.width = '100%';
             }
-        }
+
+            // 記錄當前模式
+            currentGameMode = useReference ? '隨機長度' : '完整長度';
+        } 
 
         function handleMove(event) {
             if (!isSliding) return;
@@ -273,7 +363,7 @@
         }
 
         function calculateDifference() {
-            return targetPercent - currentPercent;
+            return Math.round(targetPercent - currentPercent);
         }
 
         sliderContainer.addEventListener('mousedown', () => isSliding = true);
@@ -289,6 +379,16 @@
             const difference = calculateDifference();
             let message = `你的答案是 ${currentPercent}%\n`;
 
+            // 更新遊戲歷史記錄
+            gameCount++;
+            gameHistory.push({
+                gameNumber: gameCount,
+                target: targetPercent,
+                answer: currentPercent,
+                difference: -difference, // 轉換為用戶答案與目標的差值
+                mode: currentGameMode
+            });
+
             if (Math.abs(difference) < 1) {
                 message += '完全正確！';
                 celebrateSuccess();
@@ -303,6 +403,9 @@
 
             resultDisplay.innerHTML = message.replace('\n', '<br>');
             submitBtn.disabled = true;
+
+            // 更新歷史記錄表格
+            updateHistoryTable();
         });
 
         newGameBtn.addEventListener('click', () => generateNewTarget(false));
